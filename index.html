@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Guessing Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.7.1/gsap.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #4A90E2;
+            --secondary-color: #2ECC71;
+            --background-color: #1a1a1a;
+            --text-color: #FFFFFF;
+            --error-color: #E74C3C;
+            --success-color: #2ECC71;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: var(--background-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .game-container:hover {
+            transform: translateY(-5px);
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px rgba(74, 144, 226, 0.3);
+        }
+
+        .game-info {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .game-info span {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        input {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--primary-color);
+        }
+
+        button {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 10px;
+            background: var(--primary-color);
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(74, 144, 226, 0.4);
+        }
+
+        .feedback {
+            text-align: center;
+            min-height: 50px;
+            margin: 1rem 0;
+            font-size: 1.2rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feedback.active {
+            opacity: 1;
+        }
+
+        .feedback.error {
+            color: var(--error-color);
+        }
+
+        .feedback.success {
+            color: var(--success-color);
+        }
+
+        .history-container {
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .guess-history {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .guess-bubble {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            animation: popIn 0.3s ease forwards;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #new-game-btn {
+            background: var(--secondary-color);
+            display: block;
+            margin: 2rem auto 0;
+        }
+
+        #new-game-btn:hover {
+            background: #27ae60;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .input-section {
+                flex-direction: column;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-container">
+            <h1 class="title">Number Guessing Game</h1>
+            <div class="game-info">
+                <p>I'm thinking of a number between <span>1</span> and <span>100</span></p>
+                <p class="attempts">Attempts: <span id="attempts">0</span></p>
+            </div>
+            
+            <div class="input-section">
+                <input type="number" id="guess-input" placeholder="Enter your guess" min="1" max="100">
+                <button id="guess-btn">Guess</button>
+            </div>
+            
+            <div class="feedback" id="feedback"></div>
+            
+            <div class="history-container">
+                <h3>Previous Guesses</h3>
+                <div class="guess-history" id="guess-history"></div>
+            </div>
+            
+            <button id="new-game-btn" class="hidden">New Game</button>
+        </div>
+    </div>
+
+    <script>
+        class NumberGuessingGame {
+            constructor() {
+                this.minNumber = 1;
+                this.maxNumber = 100;
+                this.secretNumber = this.generateRandomNumber();
+                this.attempts = 0;
+                this.gameOver = false;
+                this.guessHistory = [];
+                
+                // DOM Elements
+                this.guessInput = document.getElementById('guess-input');
+                this.guessBtn = document.getElementById('guess-btn');
+                this.newGameBtn = document.getElementById('new-game-btn');
+                this.feedbackElement = document.getElementById('feedback');
+                this.attemptsElement = document.getElementById('attempts');
+                this.historyElement = document.getElementById('guess-history');
+                
+                // Event Listeners
+                this.guessBtn.addEventListener('click', () => this.makeGuess());
+                this.newGameBtn.addEventListener('click', () => this.startNewGame());
+                this.guessInput.addEventListener('keyup', (e) => {
+                    if (e.key === 'Enter') this.makeGuess();
+                });
+                
+                // Initialize animations
+                this.initializeAnimations();
+            }
+            
+            generateRandomNumber() {
+                return Math.floor(Math.random() * (this.maxNumber - this.minNumber + 1)) + this.minNumber;
+            }
+            
+            initializeAnimations() {
+                gsap.from('.game-container', {
+                    duration: 1,
+                    y: 50,
+                    opacity: 0,
+                    ease: 'power3.out'
+                });
+            }
+            
+            updateFeedback(message, type) {
+                this.feedbackElement.textContent = message;
+                this.feedbackElement.className = 'feedback';
+                
+                requestAnimationFrame(() => {
+                    this.feedbackElement.classList.add('active', type);
+                });
+            }
+            
+            addToHistory(guess) {
+                const bubble = document.createElement('div');
+                bubble.className = 'guess-bubble';
+                bubble.textContent = guess;
+                this.historyElement.appendChild(bubble);
+                
+                gsap.from(bubble, {
+                    scale: 0,
+                    opacity: 0,
+                    duration: 0.3,
+                    ease: 'back.out'
+                });
+            }
+            
+            makeGuess() {
+                if (this.gameOver) return;
+                
+                const guess = parseInt(this.guessInput.value);
+                
+                if (isNaN(guess) || guess < this.minNumber || guess > this.maxNumber) {
+                    this.updateFeedback(`Please enter a number between ${this.minNumber} and ${this.maxNumber}`, 'error');
+                    return;
+                }
+                
+                this.attempts++;
+                this.attemptsElement.textContent = this.attempts;
+                this.guessHistory.push(guess);
+                this.addToHistory(guess);
+                
+                if (guess === this.secretNumber) {
+                    this.gameOver = true;
+                    this.updateFeedback(`Congratulations! You've found the number in ${this.attempts} attempts!`, 'success');
+                    this.newGameBtn.classList.remove('hidden');
+                    gsap.from(this.newGameBtn, {
+                        scale: 0,
+                        opacity: 0,
+                        duration: 0.5,
+                        ease: 'back.out'
+                    });
+                } else {
+                    const message = guess < this.secretNumber ? 'Too low! Try again.' : 'Too high! Try again.';
+                    this.updateFeedback(message, 'error');
+                }
+                
+                this.guessInput.value = '';
+                this.guessInput.focus();
+            }
+            
+            startNewGame() {
+                this.secretNumber = this.generateRandomNumber();
+                this.attempts = 0;
+                this.gameOver = false;
+                this.guessHistory = [];
+                
+                this.attemptsElement.textContent = '0';
+                this.feedbackElement.className = 'feedback';
+                this.historyElement.innerHTML = '';
+                this.newGameBtn.classList.add('hidden');
+                this.guessInput.value = '';
+                this.guessInput.focus();
+                
+                gsap.from('.game-container', {
+                    scale: 0.95,
+                    opacity: 0.5,
+                    duration: 0.5,
+                    ease: 'power3.out'
+                });
+            }
+        }
+
+        // Initialize game when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new NumberGuessingGame();
+        });
+    </script>
+</body>
+</html> 
